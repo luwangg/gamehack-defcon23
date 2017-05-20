@@ -2,7 +2,9 @@ Shall We Play A Game
 ====================
 
 Slides: https://www.slideshare.net/sghctoma/shall-we-play-a-game-51422285
+
 Demo videos: https://www.youtube.com/playlist?list=PLO0QV3AGuqc9aIOxCVR7NEr89lUuSBSQv
+
 Talk: https://www.youtube.com/watch?v=XxyRDkmNMHg
 
 
