@@ -1,0 +1,4 @@
+<Entity
+	Name="Button"
+	Script="Scripts/Entities/Button.lua"
+/>

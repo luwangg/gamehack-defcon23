@@ -1,0 +1,6 @@
+"test"
+{
+	"base"		"base"
+	"title"		"PoC Sandbox"
+	"menusystem"	"1"
+}
